@@ -17,6 +17,9 @@ add_subdirectory(vendored/SDL EXCLUDE_FROM_ALL)
 add_executable(
 		${PROJECT_NAME}
 		main.cpp
+		include/glad/glad.h
+		include/KHR/khrplatform.h
+		glad.c
 		sdl-example.cpp
 )
 
