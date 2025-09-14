@@ -21,6 +21,7 @@ add_executable(
 		include/KHR/khrplatform.h
 		glad.c
 		sdl-example.cpp
+		opengl-example.cpp
 )
 
 # Link to the actual SDL3 library.
