@@ -10,19 +10,17 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 
-# This assumes the SDL source is available in vendored/SDL
-add_subdirectory(vendored/SDL EXCLUDE_FROM_ALL)
+find_package(glfw3 3.3 REQUIRED)
+
 
 # Create your game executable target as usual
 add_executable(
 		${PROJECT_NAME}
 		main.cpp
-		include/glad/glad.h
-		include/KHR/khrplatform.h
+		glad/glad.h
+		KHR/khrplatform.h
 		glad.c
-		sdl-example.cpp
-		opengl-example.cpp
 )
 
 # Link to the actual SDL3 library.
-target_link_libraries(${PROJECT_NAME} PRIVATE SDL3::SDL3)
+target_link_libraries(${PROJECT_NAME} PRIVATE glfw)
