@@ -20,6 +20,7 @@ add_executable(
 		glad/glad.h
 		KHR/khrplatform.h
 		glad.c
+		banana_engine.cpp
 )
 
 # Link to the actual SDL3 library.
