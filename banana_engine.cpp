@@ -1,46 +1,33 @@
 #ifndef BANANA_ENGINE
 #define BANANA_ENGINE
+
+
 #include <iostream>
 #include "glad/glad.h"
 #include <GLFW/glfw3.h>
+#include <cmath>
+#include <string>
+#include "shader.h"
 
 
 class BananaEngine
 {
     private: GLFWwindow* window = nullptr;
+    private: std::string currentExecutablePath = "\0";
+
+    private: float time = 0.0;
+
     private: bool x = false;
     private: bool z = false;
-    private: unsigned int vertexShader;
-    private: unsigned int fragmentShader;
-    private: unsigned int fragmentShader2;
-    private: unsigned int shaderProgram;
-    private: unsigned int shaderProgram2;
+
+    private: Shader* shader;
+    private: Shader* shader2;
+
     private: unsigned int triangleVBO;
     private: unsigned int triangleVAO;
     private: unsigned int rectangleVBO;
     private: unsigned int rectangleVAO;
     private: unsigned int rectangleEBO;
-
-    private: const char *vertexShaderSource = "#version 330 core\n"
-    "layout (location = 0) in vec3 aPos;\n"
-    "void main()\n"
-    "{\n"
-    "   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
-    "}\0";
-
-    private: const char *fragmentShaderSource = "#version 330 core\n"
-    "out vec4 FragColor;\n"
-    "void main()\n"
-    "{\n"
-    "   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
-    "}\n";
-
-    private: const char *fragmentShaderSource2 = "#version 330 core\n"
-    "out vec4 FragColor;\n"
-    "void main()\n"
-    "{\n"
-    "   FragColor = vec4(1.0f, 0.9f, 0.2f, 1.0f);\n"
-    "}\n";
 
 
     public: void Start()
@@ -57,12 +44,14 @@ class BananaEngine
 
         while( !glfwWindowShouldClose( window ) )
         {
+            time = glfwGetTime();
             HandleInput();
             Render();
             glfwSwapBuffers( window );
             glfwPollEvents();
         }
         
+        UnloadShaders();
         glfwTerminate();
     }
 
@@ -113,93 +102,34 @@ class BananaEngine
     {
         glClearColor( 0.2f, 0.3f, 0.3f, 1.0f );
         glClear( GL_COLOR_BUFFER_BIT );
+
+        if ( z ) 
+            shader->SetFloat4( "renderColor", sin( time*2.0+M_PI )*0.5+0.5, sin( time*2.0 )*0.5+0.5, 0.0, 1.0 );
         
         // glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
-        if ( !x )
+        if ( x )
             DrawRectangle();
         else
             DrawTriangle();
-    }
-
-
-    private: void LoadShaders()
-    {
-        int success;
-        char infoLog[512];
-
-        vertexShader = glCreateShader( GL_VERTEX_SHADER );
-        glShaderSource( vertexShader, 1, &vertexShaderSource, NULL );
-        glCompileShader( vertexShader );
-        glGetShaderiv( vertexShader, GL_COMPILE_STATUS, &success );
-        if ( !success )
-        {
-            glGetShaderInfoLog( vertexShader, 512, NULL, infoLog );
-            std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
-        }
-
-        fragmentShader = glCreateShader( GL_FRAGMENT_SHADER );
-        glShaderSource( fragmentShader, 1, &fragmentShaderSource, NULL );
-        glCompileShader( fragmentShader );
-        glGetShaderiv( fragmentShader, GL_COMPILE_STATUS, &success );
-        if ( !success )
-        {
-            glGetShaderInfoLog( fragmentShader, 512, NULL, infoLog );
-            std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
-        }
-
-        fragmentShader2 = glCreateShader( GL_FRAGMENT_SHADER );
-        glShaderSource( fragmentShader2, 1, &fragmentShaderSource2, NULL );
-        glCompileShader( fragmentShader2 );
-        glGetShaderiv( fragmentShader2, GL_COMPILE_STATUS, &success );
-        if ( !success )
-        {
-            glGetShaderInfoLog( fragmentShader2, 512, NULL, infoLog );
-            std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
-        }
-
-        shaderProgram = glCreateProgram();
-        glAttachShader( shaderProgram, vertexShader );
-        glAttachShader( shaderProgram, fragmentShader );
-        glLinkProgram( shaderProgram );
-        glGetProgramiv( shaderProgram, GL_LINK_STATUS, &success );
-        if ( !success )
-        {
-            glGetProgramInfoLog( shaderProgram, 512, NULL, infoLog );
-            std::cout << "ERROR::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
-        }
-
-        shaderProgram2 = glCreateProgram();
-        glAttachShader( shaderProgram2, vertexShader );
-        glAttachShader( shaderProgram2, fragmentShader2 );
-        glLinkProgram( shaderProgram2 );
-        glGetProgramiv( shaderProgram2, GL_LINK_STATUS, &success );
-        if ( !success )
-        {
-            glGetProgramInfoLog( shaderProgram2, 512, NULL, infoLog );
-            std::cout << "ERROR::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
-        }
-
-        glDeleteShader( vertexShader );
-        glDeleteShader( fragmentShader );
-
-        glUseProgram( shaderProgram );
     }
     
     
     private: void LoadTriangle()
     {
         float vertices[] = {
-            -0.5f, -0.5f, 0.0f,
-            0.5f, -0.5f, 0.0f,
-            0.0f,  0.5f, 0.0f,
+            -0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,
+            0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,
+            0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f,
         };
         glGenVertexArrays( 1, &triangleVAO );
         glBindVertexArray( triangleVAO );
         glGenBuffers( 1, &triangleVBO );
         glBindBuffer( GL_ARRAY_BUFFER, triangleVBO );
         glBufferData( GL_ARRAY_BUFFER, sizeof( vertices ), vertices, GL_STATIC_DRAW );
-        glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 3*sizeof( float ), (void*)0 );
+        glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 6*sizeof( float ), (void*)0 );
         glEnableVertexAttribArray( 0 );
+        glVertexAttribPointer( 1, 3, GL_FLOAT, GL_FALSE, 6*sizeof( float ), (void*)( 3 * sizeof( float ) ) );
+        glEnableVertexAttribArray( 1 );
 
         glBindVertexArray( 0 );
     }
@@ -208,10 +138,10 @@ class BananaEngine
     private: void LoadRectangle()
     {
         float vertices[] = {
-            -0.5f,  0.5f, 0.0f,
-            0.5f,  0.5f, 0.0f,
-            0.5f, -0.5f, 0.0f,
-            -0.5f, -0.5f, 0.0f,
+            -0.5f,  0.5f, 0.0f,  0.0f, 1.0f, 0.8f,
+            0.5f,  0.5f, 0.0f,  1.0f, 0.0f, 0.0f,
+            0.5f, -0.5f, 0.0f,  0.8f, 1.0f, 0.0f,
+            -0.5f, -0.5f, 0.0f,  0.0f, 0.0f, 1.0f,
         };
         unsigned int indices[] = {
             0,  1,  2,
@@ -228,16 +158,36 @@ class BananaEngine
         glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, rectangleEBO );
         glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( indices ), indices, GL_STATIC_DRAW );
 
-        glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 3*sizeof( float ), (void*)0 );
+        glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 6*sizeof( float ), (void*)0 );
         glEnableVertexAttribArray( 0 );
+        glVertexAttribPointer( 1, 3, GL_FLOAT, GL_FALSE, 6*sizeof( float ), (void*)( 3 * sizeof( float ) ) );
+        glEnableVertexAttribArray( 1 );
 
         glBindVertexArray( 0 );
     }
 
 
+    private: void LoadShaders()
+    {
+        shader = new Shader( "./Shaders/shader.vertex", "./Shaders/shader.frag" );
+        shader2 = new Shader( "./Shaders/shader.vertex", "./Shaders/shader2.frag" );
+    }
+
+
+    private: void UnloadShaders()
+    {
+        delete shader;
+        delete shader2;
+    }
+
+
     private: void DrawTriangle()
     {
-        glUseProgram( z? shaderProgram2 : shaderProgram );
+        if ( z )
+            shader->Use();
+        else
+            shader2->Use();
+
         glBindVertexArray( triangleVAO );
         glDrawArrays( GL_TRIANGLES, 0, 3 );
         glBindVertexArray( 0 );
@@ -246,7 +196,11 @@ class BananaEngine
 
     private: void DrawRectangle()
     {
-        glUseProgram( z? shaderProgram2 : shaderProgram );
+        if ( z )
+            shader->Use();
+        else
+            shader2->Use();
+
         glBindVertexArray( rectangleVAO );
         glDrawElements( GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0 );
         glBindVertexArray( 0 );
@@ -257,6 +211,19 @@ class BananaEngine
     {
         glViewport(0, 0, width, height);
     }
+
+
+    // private: std::string GetAbsolutePathFromRelative( std::string relativePath )
+    // {
+    //     if ( currentExecutablePath == "\0" )
+    //         currentExecutablePath =
+    // }
+
+
+    // private: std::string GetCurrentExecutablePath()
+    // {
+
+    // }
 };
 
 
